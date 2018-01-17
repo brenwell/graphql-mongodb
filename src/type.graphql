@@ -1,0 +1,38 @@
+type Query {
+    user(_id: String): User
+    post(_id: String): Post
+    posts: [Post]
+    comment(_id: String): Comment
+}
+
+type User {
+    _id: ID!
+    name: String
+    facebookId: String
+    facebookUsername: String
+}
+
+type Post {
+    _id: ID!
+    title: String
+    content: String
+    comments: [Comment]
+}
+
+type Comment {
+    _id: ID!
+    postId: String
+    content: String
+    post: Post
+}
+
+type Mutation {
+    createUser(name: String, facebookId: String, facebookUsername: String ): User
+    createPost(title: String, content: String): Post
+    createComment(postId: String, content: String): Comment
+}
+
+schema {
+    query: Query
+    mutation: Mutation
+}

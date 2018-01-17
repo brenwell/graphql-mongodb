@@ -1,0 +1,9 @@
+HOST: http://localhost
+PORT: 3000
+DB_URL: mongodb://localhost:27017/blog
+GRAPHIQL_PATH: /graphiql
+GRAPHQL_PATH: /graphql
+FACEBOOK:
+  ID: '298798940239793'
+  SECRET: a188fb4d7a070e675fa53c21e7ea41ec
+  CALLBACK: /auth/facebook/callback
