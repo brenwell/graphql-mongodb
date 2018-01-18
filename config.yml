@@ -1,7 +1,10 @@
 HOST: http://localhost
 PORT: 4000
 DB_URL: mongodb://localhost:27017/blog
+
 FACEBOOK:
-  ID: '298798940239793'
-  SECRET: a188fb4d7a070e675fa53c21e7ea41ec
-  CALLBACK: /auth/facebook/callback
+  clientID: '298798940239793'
+  clientSecret: a188fb4d7a070e675fa53c21e7ea41ec
+
+REDIS:
+  db: 5

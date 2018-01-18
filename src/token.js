@@ -1,15 +1,43 @@
 const jwt = require('jsonwebtoken');
-const secret = '9+d3VaTe)337VdXay3kmk3qsM6uH(skh?Cau,dEDJHfqATgy/CpXDo@Z{cJ3u?#4'
 
-function encode(o) {
-    return jwt.sign(o, secret, { expiresIn: '1d' });
+let options
+let secret
+
+function init(sec, opts)
+{
+    options = opts
+    secret = sec
 }
 
-function decode(t, cb) {
-    jwt.verify(t, secret, cb)
+/**
+ * Create a JWT from an oject
+ *
+ * @param  {<type>}  o        User object tradionally, must have id
+ * @return {<type>}  { description_of_the_return_value }
+ */
+function encode(o)
+{
+    if (!secret)
+    {
+        throw new Error('Token secret not set')
+    }
+
+    if (!o._id)
+    {
+        throw new Error('Object must have a _id')
+    }
+
+    const subject = o._id.toString()
+
+    const opts = {
+        ...options,
+        subject
+    }
+
+    return jwt.sign(o, secret, opts);
 }
 
 module.exports = {
+    init,
     encode,
-    decode
 }

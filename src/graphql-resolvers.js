@@ -1,5 +1,4 @@
 const ROLES = require('./roles')
-const { getUserFromToken } = require('./session')
 
 /**
  * Connect graphql to MongoDB
@@ -65,6 +64,8 @@ function AUTHENTICATE(role, fn)
 {
     function call(...args)
     {
+        console.log(args[2].user)
+
         if ( !args || args[2] || !args[2].user )
         {
             throw new Error('User is not AUTHENTICATED');

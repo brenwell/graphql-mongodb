@@ -3,8 +3,9 @@ const authRouter = express.Router()
 const passport = require('passport')
 const FacebookTokenStrategy = require('passport-facebook-token')
 const cache = require('./cache')
-const session = require('./session')
+const { encode } = require('./token')
 const {findOrCreateUser} = require('./db')
+const blacklist = require('express-jwt-blacklist');
 
 function authSetup(opts)
 {
@@ -32,7 +33,9 @@ authRouter.get('/facebook/token',
     function (req, res) {
         if (req.user)
         {
-            const token = session.getAuthorizedToken(req.user)
+            console.log('login',req.user.value)
+
+            const token = encode(req.user.value)
 
             res.status(200).json( {
                 success : true,
@@ -51,9 +54,11 @@ authRouter.get('/facebook/token',
     }
 );
 
-authRouter.get( "/logout", session.deauthorizeToken, ( req, res ) => {
+authRouter.get( "/logout", ( req, res ) => {
 
-    req.logout();
+    console.log('logout',req.user)
+
+    blacklist.revoke(req.user)
 
     res.json( {
          success : true,
@@ -61,12 +66,25 @@ authRouter.get( "/logout", session.deauthorizeToken, ( req, res ) => {
     });
 } );
 
-authRouter.get( "/protected", session.isTokenAuthorized, ( req, res ) => {
+authRouter.get( "/protected", ( req, res ) => {
     res.json( {
          success : true,
          message : "You have access",
     });
 } );
+
+/**
+ * Helper to sends an un authorized responses.
+ *
+ * @param  {<type>}  res  The resource
+ */
+function sendUnAuth(res)
+{
+    res.status( 401 ).send( {
+        success : false,
+        message : "User not logged in",
+    } );
+}
 
 
 module.exports = {

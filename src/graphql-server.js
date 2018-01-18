@@ -1,5 +1,4 @@
 const graphqlHTTP = require('express-graphql');
-const {getUserFromReq} = require('./session')
 
 function init(schema)
 {
@@ -7,7 +6,7 @@ function init(schema)
     {
         const startTime = Date.now();
 
-        const user = await getUserFromReq(req)
+        const { user } = req
 
         return {
             schema: schema,

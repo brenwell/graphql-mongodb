@@ -1,12 +1,16 @@
 // Get config
 const config = require('config-yml');
 const url = `${config.HOST}:${config.PORT}`
-const secret = '9+d3VaTe)337VdXay3kmk3qsM6uH(skh?Cau,dEDJHfqATgy/CpXDo@Z{cJ3u?#4'
+const privatKey = require('fs').readFileSync(__dirname + '/../keys/jwtRS256.key')
+const publicKey = require('fs').readFileSync(__dirname + '/../keys/jwtRS256.key.pub')
+
 const express = require('express')
 const bodyParser = require('body-parser')
 const cors = require('cors')
 const helmet = require('helmet')
+const redis = require("redis")
 const jwt = require('express-jwt');
+const blacklist = require('express-jwt-blacklist');
 
 const {makeExecutableSchema} = require('graphql-tools')
 
@@ -16,6 +20,7 @@ const router = require('./router')
 const {authRouter, authSetup} = require('./auth')
 const graphqlResolvers = require('./graphql-resolvers')
 const graphqlServer = require('./graphql-server')
+const tokenizer = require('./token')
 
 async function main()
 {
@@ -29,10 +34,7 @@ async function main()
     const schema = makeExecutableSchema({typeDefs,resolvers})
 
     // setup passport authentication
-    const passport = authSetup({
-        clientID: config.FACEBOOK.ID,
-        clientSecret: config.FACEBOOK.SECRET,
-    })
+    const passport = authSetup(config.FACEBOOK)
 
     // start Express app
     const app = express()
@@ -43,17 +45,35 @@ async function main()
     // Add cross domain shit
     app.use(cors())
 
-    // const tokenOpts = {
-    //     secret,
-    //     issuer: url
-    // }
+    // get redis client
+    const client = redis.createClient(config.REDIS)
 
-    // app.use(jwt(tokenOpts).unless({path: ['/auth']}));
+    // setup token encodeer
+    tokenizer.init(privatKey, {
+        issuer: url,
+        algorithm: 'RS256',
+        expiresIn: '1d'
+    })
 
-    // app.use((req,res,next) => {
-    //     console.log(req.user)
-    //     next()
-    // })
+    // configure blacklist
+    blacklist.configure({
+        store: {
+            type: 'redis',
+            client: client
+        }
+    });
+
+    // decode options
+    const tokenOpts = {
+        secret: publicKey,
+        issuer: url,
+        credentialsRequired: false,
+        isRevoked: blacklist.isRevoked,
+        algorithms: ['RS256']
+    }
+
+    // setup token decoder
+    app.use(jwt(tokenOpts));
 
     // use passport
     app.use(passport.initialize());
