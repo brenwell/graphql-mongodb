@@ -1,4 +1,9 @@
-const ROLES = require('./roles')
+const ROLES = require('../roles')
+const {
+    authenticate,
+    authorizeFacebookUser,
+    deauthorizeUser
+} = require('../auth')
 
 /**
  * Connect graphql to MongoDB
@@ -11,7 +16,8 @@ const ROLES = require('./roles')
 function resolvers({Users,Posts,Comments})
 {
     return {
-        Query: {
+        Query:
+        {
             user: async (root, {_id}) => {
                 return await Users.findOne(ObjectId(_id))
             },
@@ -25,30 +31,39 @@ function resolvers({Users,Posts,Comments})
                 return await Comments.findOne(ObjectId(_id))
             },
         },
-        Post: {
+        Post:
+        {
             comments: async ({_id}) => {
                 return await Comments.find({postId: _id}).toArray()
             }
         },
-        Comment: {
+        Comment:
+        {
             post: async ({postId}) => {
                 return await Posts.findOne(ObjectId(postId))
             }
         },
-        Mutation: {
-            createUser: AUTHENTICATE( ROLES.admin,
+        Mutation:
+        {
+            authorizeUser: async (root, { accessToken }) => {
+                return await authorizeFacebookUser(accessToken)
+            },
+            deauthorizeUser: async (root, args, { user }) => {
+                return await deauthorizeUser(user)
+            },
+            createUser: authenticate( ROLES.admin,
                 async (root, args, context, info) => {
                     const res = await Users.insert(args)
                     return res.ops[0]
                 }
             ),
-            createPost: AUTHENTICATE( ROLES.user,
+            createPost: authenticate( ROLES.user,
                 async (root, args, context, info) => {
                     const res = await Posts.insert(args)
                     return res.ops[0]
                 }
             ),
-            createComment: AUTHENTICATE( ROLES.user,
+            createComment: authenticate( ROLES.user,
                 async (root, args) => {
                     const res = await Comments.insert(args)
                     return res.ops[0]
@@ -60,26 +75,5 @@ function resolvers({Users,Posts,Comments})
 
 module.exports = resolvers
 
-function AUTHENTICATE(role, fn)
-{
-    function call(...args)
-    {
-        console.log(args[2].user)
 
-        if ( !args || args[2] || !args[2].user )
-        {
-            throw new Error('User is not AUTHENTICATED');
-            return
-        }
 
-        if(!user || role > user.role)
-        {
-            throw new Error('User is not AUTHORIZED');
-            return
-        }
-
-        fn(...args)
-    }
-
-    return call
-}

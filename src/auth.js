@@ -1,93 +1,94 @@
-const express = require('express')
-const authRouter = express.Router()
-const passport = require('passport')
-const FacebookTokenStrategy = require('passport-facebook-token')
-const cache = require('./cache')
-const { encode } = require('./token')
-const {findOrCreateUser} = require('./db')
+const FB = require('fb')
 const blacklist = require('express-jwt-blacklist');
-
-function authSetup(opts)
-{
-    passport.use(new FacebookTokenStrategy(opts,
-        function(accessToken, refreshToken, profile, done)
-        {
-            const user = {
-                name: profile.displayName,
-                email: profile.emails[0].value,
-                facebookId: profile.id,
-                facebookEmail: profile.emails[0].value,
-                facebookUsername: profile.displayName,
-                facebookFirstName: profile.name.givenName,
-                facebookLastName: profile.name.familyName,
-            }
-
-            findOrCreateUser(user, done)
-        }))
-
-    return passport
-}
-
-authRouter.get('/facebook/token',
-    passport.authenticate('facebook-token', { session: false }),
-    function (req, res) {
-        if (req.user)
-        {
-            console.log('login',req.user.value)
-
-            const token = encode(req.user.value)
-
-            res.status(200).json( {
-                success : true,
-                message : "User logged in",
-                token: token,
-                user: req.user
-            });
-        }
-        else
-        {
-            res.status(401).json( {
-                success : false,
-                message : "User not logged in",
-            });
-        }
-    }
-);
-
-authRouter.get( "/logout", ( req, res ) => {
-
-    console.log('logout',req.user)
-
-    blacklist.revoke(req.user)
-
-    res.json( {
-         success : true,
-         message : "User logged out",
-    });
-} );
-
-authRouter.get( "/protected", ( req, res ) => {
-    res.json( {
-         success : true,
-         message : "You have access",
-    });
-} );
+const ROLES = require('./roles')
+const { findOrCreateUser } = require('./db')
+const { encode } = require('./token')
 
 /**
- * Helper to sends an un authorized responses.
+ * Setup facebook
  *
- * @param  {<type>}  res  The resource
+ * @param  {<type>}  opts  The options
  */
-function sendUnAuth(res)
+function configure(opts)
 {
-    res.status( 401 ).send( {
-        success : false,
-        message : "User not logged in",
-    } );
+    FB.options(opts)
 }
 
+/**
+ * Authorize a user via facebook
+ *
+ * @param  {<type>}   accessToken  The access token
+ * @return {Promise}  { description_of_the_return_value }
+ */
+async function authorizeFacebookUser(accessToken)
+{
+    const request = {
+        fields: ['id', 'name', 'email', 'gender', 'birthday', 'picture'],
+        access_token: accessToken
+    }
+
+    const profile = await FB.api('me', request)
+
+    const forInsert = {
+        name: profile.name,
+        email: profile.email,
+        gender: profile.gender,
+        birthday: profile.birthday,
+        picture: profile.picture.data.url,
+        facebookId: profile.id,
+        facebookEmail: profile.email,
+        role: ROLES.user,
+    }
+
+    const dbResponse = await findOrCreateUser(forInsert)
+
+    const user = dbResponse.value
+
+    const token = encode(user)
+
+    return { ...user, token }
+}
+
+/**
+ * Logout
+ */
+function deauthorizeUser(user)
+{
+    blacklist.revoke(user)
+}
+
+/**
+ * authenticate
+ *
+ * @param  {number}    role  The role
+ * @param  {Function}  fn    The function
+ * @return {<type>}    { description_of_the_return_value }
+ */
+function authenticate(role, fn)
+{
+    function call(...args)
+    {
+        if ( !args || args[2] || !args[2].user )
+        {
+            throw new Error('User is not AUTHENTICATED');
+            return
+        }
+
+        if(!user || role > user.role)
+        {
+            throw new Error('User is not AUTHORIZED');
+            return
+        }
+
+        fn(...args)
+    }
+
+    return call
+}
 
 module.exports = {
-    authSetup,
-    authRouter
+    configure,
+    authorizeFacebookUser,
+    deauthorizeUser,
+    authenticate
 }

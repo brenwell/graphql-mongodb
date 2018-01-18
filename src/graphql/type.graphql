@@ -9,12 +9,13 @@ type User {
     _id: ID!
     name: String
     email: String
+    gender: String
+    birthday: String
+    picture: String
     role: Int
     facebookId: String
     facebookEmail: String
-    facebookUsername: String
-    facebookFirstName: String
-    facebookLastName: String
+    token: String
 }
 
 type Post {
@@ -31,7 +32,14 @@ type Comment {
     post: Post
 }
 
+type Result {
+    success: Boolean
+}
+
 type Mutation {
+    authorizeUser(accessToken: String): User
+    deauthorizeUser(token: String): Result
+
     createUser(
         name: String,
         email: String,

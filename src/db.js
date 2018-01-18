@@ -27,13 +27,15 @@ async function setup(MONGO_URL)
 
 function findOrCreateUser(user, cb)
 {
-    _Users.findAndModify(
-        {facebookId: user.facebookId},  // query
-        [['_id','asc']],                // sort
-        {$setOnInsert: user},           // update
-        {new: true,upsert: true},       // options
-        cb                              // callback
-    );
+    return new Promise((resolve, reject) => {
+        _Users.findAndModify(
+            {facebookId: user.facebookId},  // query
+            [['_id','asc']],                // sort
+            {$setOnInsert: user},           // update
+            {new: true,upsert: true},       // options
+            (err,user) => resolve(user)     // callback
+        );
+    })
 }
 
 module.exports = {
