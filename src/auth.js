@@ -1,63 +1,75 @@
 const express = require('express')
-const auth = express.Router()
+const authRouter = express.Router()
 const passport = require('passport')
-const FacebookStrategy = require('passport-facebook')
-// const { request } = require('graphql-request')
+const FacebookTokenStrategy = require('passport-facebook-token')
+const cache = require('./cache')
+const session = require('./session')
+const {findOrCreateUser} = require('./db')
 
-function authSetup(opts, getUserById, getOrCreateUser)
+function authSetup(opts)
 {
-    passport.use(new FacebookStrategy(opts,
-        function(accessToken, refreshToken, profile, done) {
-            getOrCreateUser({
+    passport.use(new FacebookTokenStrategy(opts,
+        function(accessToken, refreshToken, profile, done)
+        {
+            const user = {
+                name: profile.displayName,
+                email: profile.emails[0].value,
                 facebookId: profile.id,
-                name: profile.displayName
-            }, done)
+                facebookEmail: profile.emails[0].value,
+                facebookUsername: profile.displayName,
+                facebookFirstName: profile.name.givenName,
+                facebookLastName: profile.name.familyName,
+            }
 
+            findOrCreateUser(user, done)
         }))
-
-    passport.serializeUser(function(user, done) {
-        console.log('serializeUser',user)
-        done(null, user._id);
-    });
-
-    passport.deserializeUser(function(id, done) {
-        console.log('deserializeUser',id)
-        getUserById(id, done)
-    });
 
     return passport
 }
 
-auth.get('/facebook', passport.authenticate('facebook',{ scope: ['user_friends'] }));
+authRouter.get('/facebook/token',
+    passport.authenticate('facebook-token', { session: false }),
+    function (req, res) {
+        if (req.user)
+        {
+            const token = session.getAuthorizedToken(req.user)
 
-auth.get('/facebook/callback',
-    passport.authenticate('facebook', { failureRedirect: '/login' }),
-    function(req, res) {
-        // Successful authentication, redirect home.
-        res.redirect('/');
-});
+            res.status(200).json( {
+                success : true,
+                message : "User logged in",
+                token: token,
+                user: req.user
+            });
+        }
+        else
+        {
+            res.status(401).json( {
+                success : false,
+                message : "User not logged in",
+            });
+        }
+    }
+);
+
+authRouter.get( "/logout", session.deauthorizeToken, ( req, res ) => {
+
+    req.logout();
+
+    res.json( {
+         success : true,
+         message : "User logged out",
+    });
+} );
+
+authRouter.get( "/protected", session.isTokenAuthorized, ( req, res ) => {
+    res.json( {
+         success : true,
+         message : "You have access",
+    });
+} );
 
 
 module.exports = {
     authSetup,
-    auth
+    authRouter
 }
-
-
-// const mut = `mutation {
-//     createUser(name: "${profile.displayName}", facebookId: "${profile.id}", facebookUsername: "${profile.username}") {
-//         _id
-//         name
-//         facebookId
-//         facebookUsername
-//     }
-// }
-// `
-
-// request('http://localhost:3000/graphql', mut)
-// .then(result => {
-//      done(null, result.createUser);
-// }).catch(error => {
-//     console.log(error)
-//     done(error);
-// });

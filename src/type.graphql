@@ -8,8 +8,13 @@ type Query {
 type User {
     _id: ID!
     name: String
+    email: String
+    role: Int
     facebookId: String
+    facebookEmail: String
     facebookUsername: String
+    facebookFirstName: String
+    facebookLastName: String
 }
 
 type Post {
@@ -27,7 +32,15 @@ type Comment {
 }
 
 type Mutation {
-    createUser(name: String, facebookId: String, facebookUsername: String ): User
+    createUser(
+        name: String,
+        email: String,
+        facebookId: String,
+        facebookEmail: String,
+        facebookUsername: String,
+        facebookFirstName: String,
+        facebookLastName: String): User
+
     createPost(title: String, content: String): Post
     createComment(postId: String, content: String): Comment
 }

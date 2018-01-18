@@ -4,7 +4,7 @@
   "description": "",
   "main": "src/index.js",
   "scripts": {
-    "start": "node src/index.js",
+    "start": "nodemon src/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Brendon Blackwell",
@@ -14,13 +14,20 @@
     "config-yml": "^0.8.0",
     "cors": "^2.8.1",
     "express": "^4.14.0",
-    "graphql": "^0.8.2",
+    "express-graphql": "^0.6.11",
+    "express-jwt": "^5.3.0",
+    "graphql": "^0.11.0",
     "graphql-request": "^1.4.1",
     "graphql-server-express": "^0.4.3",
     "graphql-tools": "^0.8.3",
+    "helmet": "^3.9.0",
+    "jsonwebtoken": "^8.1.0",
     "mongodb": "^2.2.15",
+    "parse-bearer-token": "0.0.1",
     "passport": "^0.4.0",
     "passport-facebook": "^2.1.1",
+    "passport-facebook-token": "^3.3.0",
+    "redis": "^2.8.0",
     "request": "^2.83.0"
   }
 }

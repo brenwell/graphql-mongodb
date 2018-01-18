@@ -1,21 +1,29 @@
 // Get config
 const config = require('config-yml');
 const url = `${config.HOST}:${config.PORT}`
-
+const secret = '9+d3VaTe)337VdXay3kmk3qsM6uH(skh?Cau,dEDJHfqATgy/CpXDo@Z{cJ3u?#4'
 const express = require('express')
 const bodyParser = require('body-parser')
-const {graphqlExpress, graphiqlExpress} = require('graphql-server-express')
-const {makeExecutableSchema} = require('graphql-tools')
 const cors = require('cors')
-const DB = require('./db')
+const helmet = require('helmet')
+const jwt = require('express-jwt');
+
+const {makeExecutableSchema} = require('graphql-tools')
+
+const {setup} = require('./db')
 const typeDefs = require('./type-defs')
 const router = require('./router')
-const {auth, authSetup} = require('./auth')
+const {authRouter, authSetup} = require('./auth')
+const graphqlResolvers = require('./graphql-resolvers')
+const graphqlServer = require('./graphql-server')
 
 async function main()
 {
     // connect to db & get resolvers
-    const {resolvers, getUserById, getOrCreateUser} = await DB(config.DB_URL)
+    const collections = await setup(config.DB_URL)
+
+    // build graphql resolvers
+    const resolvers = graphqlResolvers(collections)
 
     // make Graphql schema
     const schema = makeExecutableSchema({typeDefs,resolvers})
@@ -24,33 +32,44 @@ async function main()
     const passport = authSetup({
         clientID: config.FACEBOOK.ID,
         clientSecret: config.FACEBOOK.SECRET,
-        callbackURL: `${url}${config.FACEBOOK.CALLBACK}`
-    },getUserById, getOrCreateUser)
+    })
 
     // start Express app
     const app = express()
 
-    app.use(passport.initialize());
-    app.use(passport.session());
+    // some api protection headers
+    app.use(helmet())
 
     // Add cross domain shit
     app.use(cors())
 
-    // add route graphql aka api
-    app.use(config.GRAPHQL_PATH, bodyParser.json(), graphqlExpress({schema}))
+    // const tokenOpts = {
+    //     secret,
+    //     issuer: url
+    // }
 
-    // add route to graphiql
-    app.use(config.GRAPHIQL_PATH, graphiqlExpress({endpointURL: '/graphql'}))
+    // app.use(jwt(tokenOpts).unless({path: ['/auth']}));
+
+    // app.use((req,res,next) => {
+    //     console.log(req.user)
+    //     next()
+    // })
+
+    // use passport
+    app.use(passport.initialize());
 
     // add frontend router
-    app.use('/',router)
+    app.use('/', router)
 
     // add auth router
-    app.use('/auth',auth)
+    app.use('/auth', authRouter)
+
+    // setup graphql and context for authorization
+    app.use('/graphql', graphqlServer(schema));
 
     // start server
     app.listen(config.PORT, () => {
-      console.log(`Visit ${url}${config.GRAPHIQL_PATH}`)
+      console.log(`Visit ${url}/graphql`)
     })
 }
 
