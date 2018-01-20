@@ -1,4 +1,5 @@
 type Query {
+    viewer(token: String): User
     user(_id: String): User
     post(_id: String): Post
     posts: [Post]

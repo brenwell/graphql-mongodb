@@ -3,12 +3,20 @@ const PORT = 4000
 const URL = `${HOST}:${PORT}`
 const ALGORITHM = 'RS256'
 
-const CONF =
-{
+module.exports = require('deep-freeze')
+({
     URL: URL,
     HOST: HOST,
     PORT: PORT,
     API_ROUTE: '/graphql',
+
+    // User permissions
+    ROLES: {
+        everyone:0,
+        staff:1,
+        admin:2,
+        owner:3
+    },
 
     // Mongo Database
     DB_URL: 'mongodb://localhost:27017/blog',
@@ -55,6 +63,4 @@ const CONF =
             }
         }
     },
-}
-
-module.exports = CONF
+})

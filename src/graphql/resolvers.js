@@ -1,4 +1,5 @@
-const ROLES = require('../roles')
+const { ObjectId } = require('mongodb')
+
 const {
     authenticate,
     authorizeFacebookUser,
@@ -13,11 +14,14 @@ const {
  * @param  {<type>}  arg1.Comments  The comments
  * @return {Object}  { description_of_the_return_value }
  */
-function resolvers({Users,Posts,Comments})
+function resolvers({Users,Posts,Comments}, ROLES)
 {
     return {
         Query:
         {
+            viewer: async (root, {token}, {user}) => {
+                return await Users.findOne(ObjectId(user._id))
+            },
             user: async (root, {_id}) => {
                 return await Users.findOne(ObjectId(_id))
             },

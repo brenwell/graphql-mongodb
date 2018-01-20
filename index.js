@@ -10,7 +10,6 @@ const redis = require("redis")
 const jwt = require('express-jwt');
 const blacklist = require('express-jwt-blacklist');
 const {makeExecutableSchema} = require('graphql-tools')
-const router = require('./src/router')
 const tokenizer = require('./src/token')
 const {setup} = require('./src/db')
 const auth = require('./src/auth')
@@ -26,13 +25,13 @@ const publicKey = fs.readFileSync(config.KEYS.publicKeyPath)
 async function main()
 {
     // setup authentication
-    auth.configure(config.FACEBOOK)
+    auth.configure(config.FACEBOOK, config.ROLES)
 
     // connect to db & get resolvers
     const collections = await setup(config.DB_URL)
 
     // build graphql resolvers
-    const resolvers = graphqlResolvers(collections)
+    const resolvers = graphqlResolvers(collections, config.ROLES)
 
     // make Graphql schema
     const schema = makeExecutableSchema({typeDefs,resolvers})
@@ -59,8 +58,13 @@ async function main()
         ...config.JWT
     }));
 
-    // add frontend router
-    app.use('/', router)
+    app.use((req, res, next) => {
+        console.log(req.user)
+        next()
+    })
+
+    // add root route for checking uptime
+    app.get('/', (req, res) =>  res.send(`OK - ${new Date()}`) )
 
     // setup graphql and context for authorization
     app.use(config.API_ROUTE, graphqlServer(schema, config.GRAPHQL));

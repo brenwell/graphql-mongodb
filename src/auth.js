@@ -1,17 +1,19 @@
 const FB = require('fb')
 const blacklist = require('express-jwt-blacklist');
-const ROLES = require('./roles')
 const { findOrCreateUser } = require('./db')
 const { encode } = require('./token')
+
+let ROLES
 
 /**
  * Setup facebook
  *
  * @param  {<type>}  opts  The options
  */
-function configure(opts)
+function configure(opts, roles)
 {
     FB.options(opts)
+    ROLES = roles
 }
 
 /**
